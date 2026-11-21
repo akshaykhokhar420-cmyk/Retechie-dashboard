@@ -104,18 +104,19 @@ td small{color:var(--mut)}
 .mdl{background:var(--card);border:1px solid var(--line);border-radius:20px;width:100%;max-width:660px;padding:24px;box-shadow:var(--sh2);animation:popIn .28s var(--ease) both}.mdl.lg{max-width:980px;padding:24px;margin:0;display:block;font-size:inherit}.mdl.xl{max-width:1180px}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes popIn{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:none}}
 .toasts{position:fixed;top:18px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;z-index:100000;pointer-events:none;width:max-content;max-width:calc(100vw - 24px)}
-.toast{--tc:#16a34a;position:relative;overflow:hidden;display:flex;align-items:center;gap:13px;min-width:300px;max-width:440px;padding:14px 14px 16px 14px;border-radius:16px;background:var(--card);color:var(--ink);border:1px solid var(--line);box-shadow:0 18px 48px -12px rgba(16,24,40,.35),0 2px 6px rgba(16,24,40,.06);animation:toastIn .38s cubic-bezier(.2,1.2,.4,1) both;pointer-events:auto}
-.toast.err{--tc:#dc2626}
+.toast{--tc:#22c55e;position:relative;overflow:hidden;display:flex;align-items:center;gap:11px;min-width:260px;max-width:420px;padding:10px 10px 12px 10px;border-radius:999px;background:#0f1f1a;color:#fff;border:1px solid rgba(255,255,255,.08);box-shadow:0 14px 36px -10px rgba(0,0,0,.55);animation:toastIn .38s cubic-bezier(.2,1.2,.4,1) both;pointer-events:auto}
+.toast.err{--tc:#f87171;border-radius:18px}
 .toast.out{animation:toastOut .26s ease forwards}
-.toast .ti{flex:none;width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--tc) 14%,transparent);color:var(--tc)}
+.toast .ti{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--tc);color:#0f1f1a}
+.toast .ti svg{width:15px;height:15px}
 .toast.ok .ti svg path{stroke-dasharray:24;stroke-dashoffset:24;animation:tick .45s .15s ease forwards}
-.toast .tx{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.35}
-.toast .tx b{font-size:14.5px;font-weight:700}
-.toast .tx span{font-size:12.5px;color:var(--mut)}
+.toast .tx{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3;padding-right:4px}
+.toast .tx b{font-size:13.5px;font-weight:600;color:#fff}
+.toast .tx span{font-size:12px;color:rgba(255,255,255,.62)}
 .toast .tx span:empty{display:none}
-.toast .tc{flex:none;width:26px;height:26px;border:0;border-radius:8px;background:transparent;color:var(--mut);font-size:19px;line-height:1;cursor:pointer}
-.toast .tc:hover{background:var(--line2);color:var(--ink)}
-.toast .tp{position:absolute;left:0;bottom:0;height:3px;width:100%;background:var(--tc);transform-origin:left;animation:tbar var(--ms,3s) linear forwards}
+.toast .tc{flex:none;width:24px;height:24px;border:0;border-radius:50%;background:transparent;color:rgba(255,255,255,.55);font-size:17px;line-height:1;cursor:pointer}
+.toast .tc:hover{background:rgba(255,255,255,.12);color:#fff}
+.toast .tp{position:absolute;left:18px;right:18px;bottom:0;height:2px;border-radius:2px;background:var(--tc);opacity:.8;transform-origin:left;animation:tbar var(--ms,3s) linear forwards}
 @keyframes tick{to{stroke-dashoffset:0}}
 @keyframes tbar{to{transform:scaleX(0)}}
 @keyframes toastOut{to{opacity:0;transform:translateY(-12px) scale(.96)}}
@@ -441,3 +442,7 @@ h1{font-weight:800;letter-spacing:-.03em}
 .subnav .sn:hover{opacity:1;background:rgba(255,255,255,.07)}
 .subnav .sn.on{opacity:1;color:#fff;background:rgba(255,255,255,.14);font-weight:600}
 .mini .subnav{display:none}
+
+/* login card was a fixed 400px wide and pushed the single grid column past a phone screen */
+@media(max-width:900px){.login{grid-template-columns:minmax(0,1fr)}.login .pane{min-width:0;padding:20px 14px}.login form.card{width:100%;max-width:400px;padding:24px 20px}}
+@media(max-width:700px){.hd{flex-wrap:wrap}.hd>div:first-child{flex:1 1 100%;min-width:0}.hd h1{font-size:24px;line-height:1.25}}

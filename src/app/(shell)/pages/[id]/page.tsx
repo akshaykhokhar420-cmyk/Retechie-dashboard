@@ -1,4 +1,5 @@
 'use client';
+import { askConfirm } from '@/components/Confirm';
 import { useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -6,7 +7,7 @@ import { get, post, put, patch, del, openPreview } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/lib/toast';
 import { JsonForm } from '@/components/JsonForm';
-import { PageHead, Badge, Modal, Field, Alert, useLoad, Loading, confirmBox } from '@/components/ui';
+import { PageHead, Badge, Modal, Field, Alert, useLoad, Loading } from '@/components/ui';
 
 type Sec = { id: number; key: string; type: string; position: number; visible: boolean; draft: any; published: any; hasDraft: boolean };
 const SLOT_PAGES = ['shop', 'product', 'policy', 'contact', 'support', 'track', 'cart', 'checkout'];
@@ -59,14 +60,14 @@ function Section({ slug, s, pageId, i, n, open, w, onToggle, onMove, onChanged }
       <span>{open ? '▲' : '▼'}</span></div>
     {open && <div className="bd">
       {!s.published && <Alert kind="warn">This section has never been published and is not on the live site.</Alert>}
-      {s.type === 'hero_banner' && w && presets.length > 0 && <Field label="Hero design" hint="Switching design replaces the content below with that design's sample content (save the draft to keep it)."><select value={value.design ?? ''} onChange={(e) => { const pr = presets.find((x) => String(x.design) === e.target.value); if (pr && confirmBox(`Switch to "${pr.name}"? Current content will be replaced.`)) { setCfg(pr.config); setRaw(false); } }}>{!value.design && <option value="">—</option>}{presets.map((x) => <option key={x.design} value={x.design}>{x.design}. {x.name} — {x.bestFor}</option>)}</select></Field>}
+      {s.type === 'hero_banner' && w && presets.length > 0 && <Field label="Hero design" hint="Switching design replaces the content below with that design's sample content (save the draft to keep it)."><select value={value.design ?? ''} onChange={async (e) => { const v = e.target.value; const pr = presets.find((x) => String(x.design) === v); if (pr && await askConfirm(`Switch to "${pr.name}"? Current content will be replaced.`)) { setCfg(pr.config); setRaw(false); } }}>{!value.design && <option value="">—</option>}{presets.map((x) => <option key={x.design} value={x.design}>{x.design}. {x.name} — {x.bestFor}</option>)}</select></Field>}
       {variants && w && <Field label="Design" hint="Pick the layout for this section. Your content stays the same — save the draft and publish to apply."><select value={value.variant ?? 1} onChange={(e) => setCfg({ ...value, variant: Number(e.target.value) })}>{variants.map((x) => <option key={x.id} value={x.id}>{x.id}. {x.name}</option>)}</select></Field>}
       {SLOT_PAGES.includes(slug) && w && <Field label="Placement" hint="This page has built-in content (it can't be moved). Choose whether this section appears above or below it."><select value={value.slot === 'top' ? 'top' : 'bottom'} onChange={(e) => setCfg({ ...value, slot: e.target.value })}><option value="top">Above the page content</option><option value="bottom">Below the page content</option></select></Field>}
       {raw ? <textarea style={{ minHeight: 320, fontFamily: 'monospace', fontSize: 12.5 }} value={rawText} onChange={(e) => setRawText(e.target.value)} /> : <JsonForm value={value} onChange={setCfg} />}
       <div className="sticky-bar">{w && <><button className="btn pri" onClick={save}>Save draft</button>
         {s.hasDraft && s.published && <button className="btn" onClick={() => run(() => del(`/sections/${s.id}/draft`), 'Draft discarded')}>Discard draft</button>}
         <button className="btn" onClick={() => { if (!raw) setRawText(JSON.stringify(value, null, 2)); else { try { setCfg(JSON.parse(rawText)); } catch { return toast.err(new Error('The JSON is not valid')); } } setRaw(!raw); }}>{raw ? 'Back to form' : 'Edit as JSON'}</button>
-        <span className="grow" /><button className="btn dng" onClick={() => confirmBox('Delete this section from the page?') && run(() => del('/sections/' + s.id), 'Section deleted')}>Delete section</button></>}</div>
+        <span className="grow" /><button className="btn dng" onClick={async () => await askConfirm('Delete this section from the page?') && run(() => del('/sections/' + s.id), 'Section deleted')}>Delete section</button></>}</div>
     </div>}
   </div>;
 }

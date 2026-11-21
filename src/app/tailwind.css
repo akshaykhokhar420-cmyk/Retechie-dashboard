@@ -1,0 +1,38 @@
+/* Tailwind v4 entry. No preflight (the existing base styles stay), legacy CSS sits in its own layer
+   below utilities, so a Tailwind class always wins over an old rule while pages are converted one by one.
+   Colors read the CSS variables, so dark mode (html[data-theme=dark]) keeps working. */
+@layer theme, legacy, utilities;
+@import "tailwindcss/theme.css" layer(theme) prefix(tw);
+@import "./globals.css" layer(legacy);
+@import "tailwindcss/utilities.css" layer(utilities) prefix(tw);
+
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-ink2: var(--ink2);
+  --color-mut: var(--mut);
+  --color-line: var(--line);
+  --color-line2: var(--line2);
+  --color-pri: var(--pri);
+  --color-pri2: var(--pri2);
+  --color-pri-bg: var(--pri-bg);
+  --color-pri-ink: var(--pri-ink);
+  --color-warn: var(--warn);
+  --color-warn-bg: var(--warn-bg);
+  --color-err: var(--err);
+  --color-err-bg: var(--err-bg);
+  --color-ok: var(--ok);
+  --color-ok-bg: var(--ok-bg);
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+  --color-side: var(--side);
+  --color-side2: var(--side2);
+  --radius-r: var(--r);
+  --radius-r2: var(--r2);
+  --shadow-sh: var(--sh);
+  --shadow-sh2: var(--sh2);
+}
+

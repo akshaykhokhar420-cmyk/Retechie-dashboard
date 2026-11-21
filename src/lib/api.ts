@@ -1,5 +1,5 @@
 'use client';
-export class ApiError extends Error { constructor(public status: number, message: string, public body?: any) { super(message); } }
+class ApiError extends Error { constructor(public status: number, message: string, public body?: any) { super(message); } }
 let csrf = '';
 export const setCsrf = (c: string) => { csrf = c; };
 const BASE = '/api/v1/admin';
@@ -28,7 +28,7 @@ export const patch = <T = any>(p: string, b?: unknown) => api<T>('PATCH', p, b ?
 export const del = <T = any>(p: string) => api<T>('DELETE', p);
 export const qs = (o: Record<string, any>) => { const p = new URLSearchParams(); for (const [k, v] of Object.entries(o)) if (v !== undefined && v !== null && v !== '') p.set(k, String(v)); const s = p.toString(); return s ? '?' + s : ''; };
 
-export const FRONTEND = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
+const FRONTEND = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
 /** Opens the storefront in draft-preview mode (token verified by the API before the storefront sets its cookie). */
 export async function openPreview(path = '/') {
   const w = window.open('', '_blank');

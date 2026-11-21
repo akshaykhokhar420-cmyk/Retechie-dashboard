@@ -1,12 +1,38 @@
 'use client';
+import { askConfirm } from '@/components/Confirm';
 import { useState } from 'react';
 import { get, put, post, del, qs, when } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/lib/toast';
 import { JsonForm } from '@/components/JsonForm';
 import { MediaField } from '@/components/Media';
-import { PageHead, Tabs, Badge, Status, Modal, Field, Alert, useLoad, Loading, confirmBox } from '@/components/ui';
+import { PageHead, Tabs, Badge, Status, Modal, Field, Alert, useLoad, Loading } from '@/components/ui';
 
+
+const SCRIPT_CATS: [string, string][] = [['analytics', 'Analytics'], ['marketing', 'Marketing'], ['functional', 'Functional'], ['personalisation', 'Personalisation']];
+function Tags() {
+  const { can } = useAuth(); const toast = useToast(); const l = useLoad(() => get('/cookies/scripts'), []); const [ed, setEd] = useState<Record<string, any>>({});
+  if (!l.data) return <Loading error={l.error} />;
+  const wr = can('seo.write') || can('cookies.write');
+  const rows = [...l.data, ...(ed.new ? [ed.new] : [])];
+  const upd = (id: string, patch: any, base: any) => setEd((x) => ({ ...x, [id]: { ...base, ...(x[id] ?? {}), ...patch } }));
+  async function save(r: any, cur: any) { try { r.id === 'new' ? await post('/cookies/scripts', cur) : await put('/cookies/scripts/' + r.id, cur); toast.ok('Saved. It is live on the store now.'); setEd((x) => { const n = { ...x }; delete n[r.id]; return n; }); l.reload(); } catch (e) { toast.err(e); } }
+  return <div><h2 style={{ margin: '18px 0 8px' }}>Tracking scripts</h2>
+    <Alert kind="info">Paste the full snippet from Google Analytics, Tag Manager, Meta Pixel, Clarity, Bing UET or any other tool, including the &lt;script&gt; tags. The store adds it to the page automatically, and only after the visitor accepts the cookie category you pick. The &lt;noscript&gt; part is not needed. Only people with edit rights can change this, because a script can run code on your store.</Alert>
+    {rows.map((r: any) => { const cur = { name: r.name, category: r.category, code: r.code, enabled: r.enabled, ...(ed[r.id] ?? {}) }; const dirty = !!ed[r.id];
+      return <div className="card" key={r.id} style={{ padding: 16, marginTop: 12 }}>
+        <div className="grid g2"><Field label="Name"><input disabled={!wr} value={cur.name} placeholder="e.g. Google Analytics 4" onChange={(e) => upd(r.id, { name: e.target.value }, r)} /></Field>
+          <Field label="Load after visitor accepts"><select disabled={!wr} value={cur.category} onChange={(e) => upd(r.id, { category: e.target.value }, r)}>{SCRIPT_CATS.map(([k, n]) => <option key={k} value={k}>{n} cookies</option>)}</select></Field></div>
+        <Field label="Script" hint={r.items?.length ? `Found ${r.items.length} script${r.items.length > 1 ? 's' : ''}: ${r.items.map((i: any) => (i.src ? new URL(i.src).host : 'inline code')).join(', ')}` : 'Paste the snippet exactly as the tool gives it.'}><textarea disabled={!wr} rows={7} spellCheck={false} style={{ fontFamily: 'monospace', fontSize: 12.5 }} value={cur.code} placeholder={'<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXX"></script>\n<script>…</script>'} onChange={(e) => upd(r.id, { code: e.target.value }, r)} /></Field>
+        <div className="row sp"><label className="sw" style={{ marginTop: 0 }}><input type="checkbox" disabled={!wr} checked={cur.enabled} onChange={(e) => upd(r.id, { enabled: e.target.checked }, r)} /><i /><span><b>{cur.enabled ? 'On' : 'Off'}</b><small>{cur.enabled ? 'Runs on the store after consent.' : 'Saved but not running.'}</small></span></label>
+          {wr && <div className="row">{r.id !== 'new' && <button className="btn sm dn" onClick={async () => { if (await askConfirm(`Delete “${r.name}”?`)) { try { await del('/cookies/scripts/' + r.id); toast.ok('Deleted'); l.reload(); } catch (e) { toast.err(e); } } }}>Delete</button>}
+            {r.id === 'new' && <button className="btn" onClick={() => setEd((x) => { const n = { ...x }; delete n.new; return n; })}>Cancel</button>}
+            <button className="btn pri" disabled={!dirty && r.id !== 'new'} onClick={() => save(r, cur)}>Save</button></div>}</div>
+      </div>; })}
+    {wr && !ed.new && <button className="btn" style={{ marginTop: 12 }} onClick={() => setEd((x) => ({ ...x, new: { id: 'new', name: '', category: 'analytics', code: '', enabled: true, items: [] } }))}>+ Add script</button>}
+    <p className="hint" style={{ marginTop: 10 }}>Scripts from other websites must be allowed by the store’s security policy. Common tools (Google, Meta, Bing, LinkedIn, TikTok, Hotjar, Clarity) already are. For anything else, add its address to <code>CSP_EXTRA_HOSTS</code> in the store’s environment.</p>
+  </div>;
+}
 
 export function Global() {
   const { can } = useAuth(); const toast = useToast(); const l = useLoad(() => get('/seo/global'), []); const [g, setG] = useState<any>(null);
@@ -125,12 +151,12 @@ export function Report() {
   return <><div className="row" style={{ marginBottom: 12 }}><Badge kind={d.counts.error ? 'err' : 'ok'}>{d.counts.error} errors</Badge><Badge kind={d.counts.warning ? 'warn' : 'ok'}>{d.counts.warning} warnings</Badge><span className="hint">{d.counts.entities} items · {d.counts.sitemapUrls} sitemap URLs · generated {when(d.generatedAt)}</span><button className="btn sm" onClick={l.reload}>Re-run</button></div>
     {!d.issues.length ? <Alert kind="ok">No SEO issues found.</Alert> : <div className="card tw"><table><thead><tr><th>Level</th><th>Check</th><th>Where</th><th>Problem</th></tr></thead><tbody>{d.issues.map((i: any, n: number) => <tr key={n}><td><Badge kind={i.level === 'error' ? 'err' : i.level === 'warning' ? 'warn' : 'pri'}>{i.level}</Badge></td><td>{i.check}</td><td>{i.where}</td><td>{i.message}</td></tr>)}</tbody></table></div>}</>;
 }
-export function Redirects() {
+function Redirects() {
   const { can } = useAuth(); const toast = useToast(); const l = useLoad(() => get('/redirects'), []); const [f, setF] = useState({ fromPath: '', toPath: '', statusCode: 301 });
   return <><div className="card"><h3>Add redirect</h3><div className="row"><input style={{ flex: 1 }} placeholder="/old-path" value={f.fromPath} onChange={(e) => setF({ ...f, fromPath: e.target.value })} /><span>→</span><input style={{ flex: 1 }} placeholder="/new-path or https://…" value={f.toPath} onChange={(e) => setF({ ...f, toPath: e.target.value })} />
     <select style={{ width: 110 }} value={f.statusCode} onChange={(e) => setF({ ...f, statusCode: Number(e.target.value) })}><option value={301}>301 permanent</option><option value={302}>302 temporary</option></select>
     {can('seo.write') && <button className="btn pri" onClick={async () => { try { await post('/redirects', f); toast.ok('Redirect saved'); setF({ fromPath: '', toPath: '', statusCode: 301 }); l.reload(); } catch (e) { toast.err(e); } }}>Add</button>}</div><p className="hint">Loops and chains are rejected. Live within about a minute.</p></div>
-    {!l.data ? <Loading error={l.error} /> : <div className="card tw"><table><thead><tr><th>From</th><th>To</th><th>Type</th><th /></tr></thead><tbody>{l.data.map((r: any) => <tr key={r.id}><td>{r.from_path}</td><td>{r.to_path}</td><td>{r.status_code}</td><td>{can('seo.write') && <button className="btn sm dng" onClick={async () => { if (!confirmBox('Remove redirect?')) return; try { await del('/redirects/' + r.id); l.reload(); } catch (e) { toast.err(e); } }}>Remove</button>}</td></tr>)}</tbody></table></div>}</>;
+    {!l.data ? <Loading error={l.error} /> : <div className="card tw"><table><thead><tr><th>From</th><th>To</th><th>Type</th><th /></tr></thead><tbody>{l.data.map((r: any) => <tr key={r.id}><td>{r.from_path}</td><td>{r.to_path}</td><td>{r.status_code}</td><td>{can('seo.write') && <button className="btn sm dng" onClick={async () => { if (!await askConfirm('Remove redirect?')) return; try { await del('/redirects/' + r.id); l.reload(); } catch (e) { toast.err(e); } }}>Remove</button>}</td></tr>)}</tbody></table></div>}</>;
 }
 export function Revisions() {
   const l = useLoad(() => get('/seo/revisions'), []); const [sel, setSel] = useState<any>(null);
@@ -144,14 +170,12 @@ function CopyUrl({ url }: { url: string }) {
   return <div className="copyurl"><code>{url}</code><button className="btn sm" onClick={() => { navigator.clipboard?.writeText(url); toast.ok('Copied'); }}>Copy</button></div>;
 }
 export function Webmaster() {
-  const { can } = useAuth(); const toast = useToast(); const l = useLoad(() => get('/seo/global'), []); const ck = useLoad(() => get('/cookies/integrations').catch(() => []), []); const [w, setW] = useState<any>(null); const [busy, setBusy] = useState(false);
+  const { can } = useAuth(); const toast = useToast(); const l = useLoad(() => get('/seo/global'), []); const [w, setW] = useState<any>(null); const [busy, setBusy] = useState(false);
   if (!l.data) return <Loading error={l.error} />;
   const cur = w ?? { googleVerification: '', bingVerification: '', merchantVerification: '', businessProfileUrl: '', reviewUrl: '', mapsUrl: '', ...(l.data.webmaster ?? {}) };
   const set = (k: string, v: string) => setW({ ...cur, [k]: v });
   const base = String(l.data.baseUrl || '').replace(/\/$/, ''); const wr = can('seo.write');
   const save = async () => { setBusy(true); try { await put('/seo/global', { webmaster: cur }); toast.ok('Webmaster settings saved'); setW(null); l.reload(); } catch (e) { toast.err(e); } setBusy(false); };
-  const tag = (name: string) => (ck.data ?? []).find((x: any) => x.provider === name);
-  const TAGS: [string, string][] = [['ga4', 'Google Analytics 4'], ['gtm', 'Google Tag Manager'], ['meta_pixel', 'Meta Pixel'], ['clarity', 'Microsoft Clarity']];
   return <>
     <div className="card"><h2>Google Search Console</h2><p className="hint">Search Console → Settings → Ownership verification → <b>HTML tag</b>. Paste the whole tag or just the code from <code>content="…"</code>.</p>
       <Field label="Verification code"><input disabled={!wr} value={cur.googleVerification} onChange={(e) => set('googleVerification', e.target.value)} placeholder='e.g. abc123XYZ… or the full <meta name="google-site-verification" …> tag' /></Field>
@@ -169,9 +193,7 @@ export function Webmaster() {
       <div className="grid g2"><Field label="Business Profile / Google Maps link"><input disabled={!wr} value={cur.businessProfileUrl} onChange={(e) => set('businessProfileUrl', e.target.value)} placeholder="https://g.page/your-business" /></Field><Field label="Maps directions link (optional)"><input disabled={!wr} value={cur.mapsUrl} onChange={(e) => set('mapsUrl', e.target.value)} placeholder="https://maps.app.goo.gl/…" /></Field>
         <Field label="“Write a review” link (optional)" hint="Business Profile → Get more reviews → copy link. Use it in order emails and WhatsApp."><input disabled={!wr} value={cur.reviewUrl} onChange={(e) => set('reviewUrl', e.target.value)} placeholder="https://g.page/r/…/review" /></Field></div></div>
 
-    <div className="card"><h2>Analytics & marketing tags</h2><p className="hint">Google Analytics 4, Tag Manager, Meta Pixel and Clarity are set up in <b>Cookies → Analytics & marketing tags</b>. They only load after the visitor accepts the matching cookie category, which keeps you compliant.</p>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>{TAGS.map(([k, n]) => { const t = tag(k); const on = t?.enabled && t?.value; return <Badge key={k} kind={on ? 'ok' : undefined}>{on ? '✓ ' : ''}{n}{on ? ' · ' + t.value : ' · not set'}</Badge>; })}</div>
-      <a className="btn" href="/cookies">Open tag settings →</a></div>
+    <Tags />
 
     {wr && <div className="sticky-bar"><button className="btn pri" disabled={busy || !w} onClick={save}>{busy ? 'Saving…' : 'Save webmaster settings'}</button></div>}
   </>;

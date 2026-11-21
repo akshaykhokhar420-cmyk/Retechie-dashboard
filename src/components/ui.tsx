@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 
 export function Badge({ children, kind }: { children: ReactNode; kind?: 'ok' | 'warn' | 'err' | 'pri' }) { return <span className={'badge ' + (kind ?? '')}>{children}</span>; }
 const KIND: Record<string, 'ok' | 'warn' | 'err' | 'pri'> = { published: 'ok', active: 'ok', paid: 'ok', delivered: 'ok', confirmed: 'pri', packed: 'pri', shipped: 'pri', draft: 'warn', pending: 'warn', unpaid: 'warn', open: 'warn', in_progress: 'pri', cancelled: 'err', failed: 'err', suspended: 'err', rejected: 'err', archived: 'err', returned: 'err', refunded: 'err', closed: 'ok', approved: 'ok' };
@@ -42,6 +42,6 @@ export function Empty({ title, text, children }: { title: string; text?: string;
 export function useLoad<T>(fn: () => Promise<T>, deps: any[]) {
   const [data, setData] = useState<T | null>(null); const [error, setError] = useState<string | null>(null); const [n, setN] = useState(0);
   useEffect(() => { let live = true; setError(null); fn().then((d) => live && setData(d)).catch((e) => live && setError(e.message)); return () => { live = false; }; /* eslint-disable-next-line */ }, [...deps, n]);
-  return { data, error, reload: () => setN((x) => x + 1), set: setData };
+  const reload = useCallback(() => setN((x) => x + 1), []); // stable, so interval effects that depend on it are not restarted every render
+  return { data, error, reload, set: setData };
 }
-export const confirmBox = (m: string) => typeof window !== 'undefined' && window.confirm(m);

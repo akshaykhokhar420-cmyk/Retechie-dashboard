@@ -1,5 +1,5 @@
 import PageLoader from '@/components/PageLoader';
-import './globals.css';
+import './tailwind.css';
 import type { Metadata } from 'next';
 import { AuthProvider } from '@/lib/auth';
 import { ToastProvider } from '@/lib/toast';

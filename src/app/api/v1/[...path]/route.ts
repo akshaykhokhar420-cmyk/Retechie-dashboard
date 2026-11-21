@@ -9,7 +9,8 @@ const API = () => (process.env.API_INTERNAL_URL || 'http://localhost:4000').repl
 const DROP_REQ = new Set(['host', 'connection', 'content-length', 'accept-encoding', 'transfer-encoding', 'x-forwarded-host', 'x-forwarded-proto', 'x-forwarded-port']);
 const DROP_RES = new Set(['content-encoding', 'content-length', 'transfer-encoding', 'connection', 'set-cookie']);
 
-async function proxy(req: NextRequest, { params }: { params: { path: string[] } }) {
+async function proxy(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
+  const params = await ctx.params;
   const url = `${API()}/api/v1/${params.path.map(encodeURIComponent).join('/')}${req.nextUrl.search}`;
   const headers = new Headers();
   req.headers.forEach((v, k) => { if (!DROP_REQ.has(k.toLowerCase())) headers.set(k, v); });

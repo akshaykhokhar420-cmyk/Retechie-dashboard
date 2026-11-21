@@ -38,7 +38,6 @@ const P: Record<string, string> = {
   check: 'M5 12.5 10 17.5 19 7.5',
   zap: 'M13 2 3 14h9l-1 8 10-12h-9z',
 };
-export const ICONS = Object.keys(P);
 export default function Icon({ n, ...p }: { n: string } & SVGProps<SVGSVGElement>) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><path d={P[n] || P.file} /></svg>;
 }

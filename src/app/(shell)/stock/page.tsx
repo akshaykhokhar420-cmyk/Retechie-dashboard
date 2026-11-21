@@ -1,4 +1,5 @@
 'use client';
+import { askConfirm } from '@/components/Confirm';
 import { useState } from 'react';
 import { get, post, put, del, qs } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -22,8 +23,8 @@ export default function Stock() {
   const vendors = useLoad(() => get('/stock/vendors'), []);
   const reloadAll = () => { units.reload(); vendors.reload(); };
   const s = units.data?.summary;
-  const back = async (u: any) => { if (!confirm(`Mark ${u.model_number} as returned and remove the customer?`)) return; try { await post(`/stock/units/${u.id}/return`); toast.ok('Marked returned'); reloadAll(); } catch (e) { toast.err(e); } };
-  const remove = async (u: any) => { if (!confirm(`Delete ${u.model_number}${u.serial_number ? ' (' + u.serial_number + ')' : ''}?`)) return; try { await del(`/stock/units/${u.id}`); toast.ok('Deleted'); reloadAll(); } catch (e) { toast.err(e); } };
+  const back = async (u: any) => { if (!await askConfirm(`Mark ${u.model_number} as returned and remove the customer?`)) return; try { await post(`/stock/units/${u.id}/return`); toast.ok('Marked returned'); reloadAll(); } catch (e) { toast.err(e); } };
+  const remove = async (u: any) => { if (!await askConfirm(`Delete ${u.model_number}${u.serial_number ? ' (' + u.serial_number + ')' : ''}?`)) return; try { await del(`/stock/units/${u.id}`); toast.ok('Deleted'); reloadAll(); } catch (e) { toast.err(e); } };
 
   return <><PageHead title="Stock" sub="Every machine you buy and sell — model number, serial, vendor and customer in one place.">
     <a className="btn" href="/api/v1/admin/stock/units.csv" target="_blank" rel="noreferrer">Export CSV</a>
@@ -51,7 +52,7 @@ export default function Stock() {
         {!units.data.rows.length && <div className="empty-row">{s?.total ? 'No machines match.' : 'No machines yet — click “Add machine” to record your first one.'}</div>}</div>
         <Pager total={units.data.total} limit={25} offset={off} onChange={setOff} /></>}</>
     : <>{!vendors.data ? <Loading error={vendors.error} /> : <div className="card tw plist"><table><thead><tr><th>Vendor</th><th>Contact</th><th>City</th><th>Machines</th><th>Total bought</th><th /></tr></thead><tbody>{vendors.data.map((v: any) => <tr key={v.id}><td><b>{v.name}</b>{v.gstin && <div className="hint">GSTIN {v.gstin}</div>}</td><td>{v.contact_person}<div className="hint">{[v.phone, v.email].filter(Boolean).join(' · ')}</div></td><td>{v.city || '—'}</td><td>{v.units}</td><td>{inr(v.spent)}</td>
-      <td className="acts">{w && <><button className="btn sm" onClick={() => setVEdit(v)}>Edit</button><button className="btn sm dng" onClick={async () => { if (!confirm('Delete vendor ' + v.name + '?')) return; try { await del('/stock/vendors/' + v.id); vendors.reload(); } catch (e) { toast.err(e); } }}>✕</button></>}</td></tr>)}</tbody></table>
+      <td className="acts">{w && <><button className="btn sm" onClick={() => setVEdit(v)}>Edit</button><button className="btn sm dng" onClick={async () => { if (!await askConfirm('Delete vendor ' + v.name + '?')) return; try { await del('/stock/vendors/' + v.id); vendors.reload(); } catch (e) { toast.err(e); } }}>✕</button></>}</td></tr>)}</tbody></table>
       {!vendors.data.length && <div className="empty-row">No vendors yet — they appear here when you add a machine.</div>}</div>}
       <p className="hint">Vendors are added automatically when you type a vendor name while adding a machine.</p></>}
 

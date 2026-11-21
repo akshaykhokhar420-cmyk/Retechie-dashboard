@@ -6,7 +6,7 @@ import { Modal, Alert, useDebounced, Pager } from './ui';
 
 export type MediaRow = { id: number; public_url: string; alt_text: string; original_filename: string; width: number; height: number; folder: string; usage_count?: number; mime_type: string; size_bytes?: number; caption?: string };
 const cache = new Map<number, MediaRow>();
-export function useMedia(id?: number | null) {
+function useMedia(id?: number | null) {
   const [m, setM] = useState<MediaRow | null>(id ? cache.get(id) ?? null : null);
   useEffect(() => { if (!id) { setM(null); return; } const c = cache.get(id); if (c) { setM(c); return; } get<MediaRow>('/media/' + id).then((r) => { cache.set(id, r); setM(r); }).catch(() => setM(null)); }, [id]);
   return m;

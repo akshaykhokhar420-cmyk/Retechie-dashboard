@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/lib/auth';
+import { ConfirmHost } from '@/components/Confirm';
 import { openPreview, get } from '@/lib/api';
 import { useToast } from '@/lib/toast';
 import Icon from '@/components/Icon';
@@ -94,7 +95,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       </header>
       {maint && <div role="alert" style={{ background: '#d6453a', color: '#fff', padding: '8px 16px', fontSize: 13.5, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}><b>🛠 Website is in maintenance mode</b><span>Visitors see a "back soon" page.</span><Link href="/developer?tab=maintenance" style={{ color: '#fff', textDecoration: 'underline' }}>Manage</Link></div>}
       {me.mustSetup2fa && <div role="alert" style={{ background: '#d98b0b', color: '#fff', padding: '8px 16px', fontSize: 13.5 }}><b>Two-factor authentication is required for your role.</b> <Link href="/account" style={{ color: '#fff', textDecoration: 'underline' }}>Set it up now</Link></div>}
-      <main className="main" key={path}>{children}</main>
+      <main className="main" key={path}>{children}</main><ConfirmHost />
     </div>
     {pal && <Palette cmds={cmds} onClose={() => setPal(false)} onNav={(h) => router.push(h)} />}
   </div>;

@@ -1,11 +1,12 @@
 'use client';
+import { askConfirm } from '@/components/Confirm';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { get, put, post, del, qs, when } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/lib/toast';
-import { PageHead, Tabs, Badge, Modal, Pager, useDebounced, useLoad, Loading, Alert, Field, confirmBox } from '@/components/ui';
+import { PageHead, Tabs, Badge, Modal, Pager, useDebounced, useLoad, Loading, Alert, Field } from '@/components/ui';
 
 type Row = { id: number; key: string; page: string; section: string; kind: string; label: string; default_value: string; published_value: string | null; draft_value: string | null; status: string; version: number; updated_at: string };
 
@@ -21,7 +22,7 @@ function Editor() {
 
   async function save(r: Row) { try { await put('/content/' + r.id, { value: edits[r.id] }); toast.ok('Draft saved'); setEdits((e) => { const n = { ...e }; delete n[r.id]; return n; }); list.reload(); facets.reload(); } catch (e) { toast.err(e); } }
   async function discard(r: Row) { try { await del(`/content/${r.id}/draft`); setEdits((e) => { const n = { ...e }; delete n[r.id]; return n; }); list.reload(); facets.reload(); } catch (e) { toast.err(e); } }
-  async function publish(ids: number[] | 'all') { if (ids !== 'all' && !ids.length) return; if (ids === 'all' && !confirmBox('Publish ALL drafts to the live site?')) return; try { const r = await post('/content/publish', { ids }); toast.ok(`Published ${r.published ?? r.count ?? ''} change(s)`.trim()); list.reload(); facets.reload(); } catch (e) { toast.err(e); } }
+  async function publish(ids: number[] | 'all') { if (ids !== 'all' && !ids.length) return; if (ids === 'all' && !await askConfirm('Publish ALL drafts to the live site?')) return; try { const r = await post('/content/publish', { ids }); toast.ok(`Published ${r.published ?? r.count ?? ''} change(s)`.trim()); list.reload(); facets.reload(); } catch (e) { toast.err(e); } }
 
   const drafts = facets.data?.pages.reduce((n: number, p: any) => n + Number(p.drafts || 0), 0) ?? 0;
   const sections = (facets.data?.sections ?? []).filter((s: any) => !page || s.page === page);

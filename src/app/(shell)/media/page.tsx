@@ -1,11 +1,12 @@
 'use client';
+import { askConfirm } from '@/components/Confirm';
 import { useRef, useState } from 'react';
 import { get, api, patch, del, qs, when } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/lib/toast';
 import { Uploader, forgetMedia, type MediaRow } from '@/components/Media';
 import ImageEditor from '@/components/ImageEditor';
-import { PageHead, Modal, Field, Pager, Alert, Badge, useLoad, useDebounced, Loading, confirmBox } from '@/components/ui';
+import { PageHead, Modal, Field, Pager, Alert, Badge, useLoad, useDebounced, Loading } from '@/components/ui';
 
 export default function MediaLibrary() {
   const { can } = useAuth(); const [q, setQ] = useState(''); const dq = useDebounced(q); const [folder, setFolder] = useState(''); const [off, setOff] = useState(0); const [sel, setSel] = useState<number | null>(null);
@@ -44,7 +45,7 @@ function Detail({ id, onClose, onChanged }: { id: number; onClose: () => void; o
           {can('media.write') && <><button className="btn pri" disabled={!f} onClick={async () => { try { await patch('/media/' + id, f); toast.ok('Saved'); forgetMedia(id); setF(null); d.reload(); onChanged(); } catch (e) { toast.err(e); } }}>Save</button>
             <button className="btn" onClick={() => setEditing(true)}>✎ Edit image</button><button className="btn" onClick={() => file.current?.click()}>⇪ Replace file</button></>}
           <span className="sp" />
-          {can('media.delete') && <button className="btn dng" disabled={used} title={used ? 'Remove it from the places above first' : ''} onClick={async () => { if (!confirmBox('Delete this image permanently?')) return; try { await del('/media/' + id); toast.ok('Deleted'); onClose(); onChanged(); } catch (e) { toast.err(e); } }}>Delete</button>}</div>
+          {can('media.delete') && <button className="btn dng" disabled={used} title={used ? 'Remove it from the places above first' : ''} onClick={async () => { if (!await askConfirm('Delete this image permanently?')) return; try { await del('/media/' + id); toast.ok('Deleted'); onClose(); onChanged(); } catch (e) { toast.err(e); } }}>Delete</button>}</div>
         {used && <p className="hint">In-use images can't be deleted — replace or edit the file to change it everywhere at once.</p>}</div></div>
   </Modal>;
 }

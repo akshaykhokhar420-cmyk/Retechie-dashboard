@@ -1,51 +1,30 @@
 'use client';
+import { askConfirm } from '@/components/Confirm';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { get, post, del, when } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/lib/toast';
-import { PageHead, Tabs, Alert, useLoad, Loading, Empty } from '@/components/ui';
+import { Alert, useLoad, Loading, Empty } from '@/components/ui';
 
-type Tab = 'ov' | 'pages' | 'ips' | 'log' | 'err' | 'refs';
 export const tone = (s: number | null) => (s === null ? '#9aa8a1' : s >= 85 ? '#1c9a4f' : s >= 60 ? '#d98b0b' : '#d6453a');
 const VERD: Record<string, [string, string]> = { human: ['ok', 'Human'], crawler: ['info', 'Search/AI bot'], suspicious: ['warn', 'Suspicious'], spam: ['err', 'Spam / attack'] };
 const SEV: Record<string, string> = { error: 'err', warning: 'warn', notice: 'info' };
 export const short = (s: string, n = 60) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
 
-export function Ring({ v, size = 150, label }: { v: number | null; size?: number; label?: string }) {
+function Ring({ v, size = 150, label }: { v: number | null; size?: number; label?: string }) {
   const r = size / 2 - 12, C = 2 * Math.PI * r, p = v ?? 0;
   return <div style={{ position: 'relative', width: size, height: size }}><svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}><circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--line)" strokeWidth="12" /><circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={tone(v)} strokeWidth="12" strokeLinecap="round" strokeDasharray={`${(C * p) / 100} ${C}`} style={{ transition: 'stroke-dasharray .6s' }} /></svg>
     <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', textAlign: 'center' }}><div><b style={{ fontSize: size / 3.4, letterSpacing: '-.03em' }}>{v ?? '—'}</b>{label && <div className="hint" style={{ margin: 0 }}>{label}</div>}</div></div></div>;
 }
 export const Kpi = ({ l, v, sub, c }: { l: string; v: any; sub?: string; c?: string }) => <div className="wd"><div className="hint" style={{ margin: 0 }}>{l}</div><b style={{ fontSize: 28, letterSpacing: '-.02em', color: c }}>{v}</b>{sub && <div className="hint" style={{ margin: 0 }}>{sub}</div>}</div>;
 
-export function Stacked({ rows }: { rows: { d: string; human: number; crawler: number; bot: number }[] }) {
+function Stacked({ rows }: { rows: { d: string; human: number; crawler: number; bot: number }[] }) {
   const max = Math.max(1, ...rows.map((r) => r.human + r.crawler + r.bot));
   if (!rows.length) return <Empty title="No visitor data yet" text="Hits appear here once the storefront is live and REVALIDATE_SECRET is set on it." />;
   return <div><div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 150 }}>{rows.map((r) => <div key={r.d} title={`${String(r.d).slice(0, 10)}: ${r.human} human, ${r.crawler} crawler, ${r.bot} bot/attack`} style={{ flex: 1, display: 'flex', flexDirection: 'column-reverse', height: '100%', justifyContent: 'flex-start' }}>
     {[[r.human, '#2fbf63'], [r.crawler, '#6aa7f0'], [r.bot, '#d6453a']].map(([n, c], i) => <div key={i} style={{ height: `${(Number(n) / max) * 100}%`, background: c as string, borderRadius: i === 2 ? '6px 6px 0 0' : 0, minHeight: Number(n) ? 3 : 0 }} />)}</div>)}</div>
     <div className="row" style={{ marginTop: 10, gap: 16, fontSize: 12.5 }}><span><i style={{ background: '#2fbf63' }} className="dot" /> Real people</span><span><i style={{ background: '#6aa7f0' }} className="dot" /> Search / AI crawlers</span><span><i style={{ background: '#d6453a' }} className="dot" /> Bots, scanners & spam</span></div></div>;
-}
-
-export function SeoCommandUnused() {
-  const { can } = useAuth(); const toast = useToast(); const [tab, setTab] = useState<Tab>('ov'); const [days, setDays] = useState(7);
-  const score = useLoad(() => get('/seo-health/score'), []); const audit = useLoad(() => get('/seo-health/audit'), []); const ov = useLoad(() => get('/traffic/overview?days=' + days), [days]);
-  const running = !!audit.data?.running;
-  useEffect(() => { if (!running) return; const t = setInterval(() => { audit.reload(); }, 2000); return () => clearInterval(t); }, [running]); // eslint-disable-line
-  useEffect(() => { if (audit.data && !audit.data.running) score.reload(); }, [audit.data?.status]); // eslint-disable-line
-  const start = async () => { try { await post('/seo-health/audit'); toast.ok('Audit started — crawling every page'); audit.reload(); } catch (e) { toast.err(e); } };
-  const a = audit.data;
-  return <><PageHead title="SEO Command" sub="Site health, errors, visitor IPs and spam traffic in one place.">
-    {can('seo.write') && <button className="btn pri" disabled={running} onClick={start}>{running ? `Auditing… ${a?.done}/${a?.total}` : 'Run full site audit'}</button>}</PageHead>
-    {running && <div className="prog" style={{ margin: '0 0 14px' }}><i style={{ width: `${((a?.done || 0) / Math.max(1, a?.total || 1)) * 100}%` }} /></div>}
-    <Tabs tabs={[['ov', 'Overview'], ['pages', 'Pages'], ['ips', 'Visitors & IPs'], ['log', 'Live traffic'], ['err', 'Errors'], ['refs', 'Referrers & blocked']]} value={tab} onChange={setTab} />
-    {tab === 'ov' && <Overview score={score.data} ov={ov.data} a={a} days={days} setDays={setDays} setTab={setTab} />}
-    {tab === 'pages' && <Pages a={a} />}
-    {tab === 'ips' && <Ips yourIp={ov.data?.yourIp} />}
-    {tab === 'log' && <Log />}
-    {tab === 'err' && <Errors a={a} />}
-    {tab === 'refs' && <Refs ov={ov.data} />}
-  </>;
 }
 
 export function Overview({ score, ov, a, days, setDays, setTab }: any) {
@@ -95,7 +74,7 @@ export function Ips({ yourIp }: { yourIp?: string }) {
   const { can } = useAuth(); const toast = useToast(); const [hours, setHours] = useState(24); const [v, setV] = useState(''); const [open, setOpen] = useState<string | null>(null);
   const r = useLoad(() => get(`/traffic/ips?hours=${hours}${v ? '&verdict=' + v : ''}`), [hours, v]);
   const hits = useLoad(() => (open ? get('/traffic/live?limit=40&ip=' + encodeURIComponent(open)) : Promise.resolve([])), [open]);
-  const block = async (ip: string, reason: string) => { if (!confirm(`Block ${ip}? They will get “Access denied” on the website.`)) return; try { await post('/traffic/block', { ip, reason }); toast.ok('Blocked'); r.reload(); } catch (e) { toast.err(e); } };
+  const block = async (ip: string, reason: string) => { if (!await askConfirm(`Block ${ip}? They will get “Access denied” on the website.`)) return; try { await post('/traffic/block', { ip, reason }); toast.ok('Blocked'); r.reload(); } catch (e) { toast.err(e); } };
   const unblock = async (ip: string) => { try { await del('/traffic/block/' + encodeURIComponent(ip)); toast.ok('Unblocked'); r.reload(); } catch (e) { toast.err(e); } };
   return <><div className="row" style={{ marginBottom: 10 }}>{[[1, '1 hour'], [24, '24 hours'], [168, '7 days'], [720, '30 days']].map(([h, l]) => <button key={h} className={'btn sm ' + (hours === h ? 'pri' : '')} onClick={() => setHours(h as number)}>{l}</button>)}
     <span style={{ width: 12 }} />{[['', 'All'], ['spam', 'Spam'], ['suspicious', 'Suspicious'], ['human', 'Human'], ['crawler', 'Crawlers']].map(([k, l]) => <button key={k} className={'btn sm ' + (v === k ? 'pri' : '')} onClick={() => setV(k)}>{l}</button>)}
@@ -111,7 +90,7 @@ export function Ips({ yourIp }: { yourIp?: string }) {
 
 export function Log() {
   const [cls, setCls] = useState(''); const l = useLoad(() => get('/traffic/live?limit=120' + (cls ? '&cls=' + cls : '')), [cls]);
-  useEffect(() => { const t = setInterval(l.reload, 10000); return () => clearInterval(t); }, [l.reload]); // eslint-disable-line
+  useEffect(() => { const t = setInterval(l.reload, 10000); return () => clearInterval(t); }, [l.reload]);
   const C: Record<string, string> = { human: 'ok', crawler: 'info', bot: 'warn', probe: 'err' };
   return <><div className="row" style={{ marginBottom: 10 }}>{[['', 'All'], ['human', 'Human'], ['crawler', 'Crawlers'], ['bot', 'Bots'], ['probe', 'Attack probes']].map(([k, x]) => <button key={k} className={'btn sm ' + (cls === k ? 'pri' : '')} onClick={() => setCls(k)}>{x}</button>)}<span className="hint" style={{ margin: '0 0 0 auto' }}>Refreshes every 10 seconds</span></div>
     {!l.data ? <Loading error={l.error} /> : !l.data.length ? <Empty title="No traffic logged yet" /> : <div className="card tw"><table><thead><tr><th>Time</th><th>IP</th><th>Type</th><th>Page</th><th>Came from</th><th>Browser / bot</th></tr></thead><tbody>{l.data.map((h: any) => <tr key={h.id}><td>{when(h.ts)}</td><td>{h.ip}</td><td><span className={'badge ' + (h.kind === 'beacon' ? 'ok' : C[h.cls])}>{h.kind === 'beacon' ? 'JS ran' : h.bot_name || h.cls}</span></td><td>{short(h.path, 46)}</td><td>{short(h.referrer || '—', 36)}</td><td className="hint" style={{ margin: 0 }}>{short(h.ua || '—', 48)}</td></tr>)}</tbody></table></div>}</>;

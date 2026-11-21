@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Modal } from './ui';
 
 /** In-app confirmation modal (never window.confirm). Usage: const [ask, box] = useConfirm(); if (await ask('Delete?')) …; render {box}. */
@@ -13,3 +13,8 @@ export function useConfirm(): [(msg: string, o?: { ok?: string; danger?: boolean
   </Modal> : null;
   return [ask, node];
 }
+
+/** App-wide in-app confirm for handlers that are not React hooks: `if (!(await askConfirm('Delete?'))) return;`. <ConfirmHost /> must be mounted once (shell layout). */
+let host: ((msg: string, o?: { ok?: string; danger?: boolean; typed?: string }) => Promise<boolean>) | null = null;
+export const askConfirm = (msg: string, o?: { ok?: string; danger?: boolean; typed?: string }) => (host ? host(msg, o) : Promise.resolve(false));
+export function ConfirmHost() { const [ask, box] = useConfirm(); useEffect(() => { host = ask; return () => { if (host === ask) host = null; }; }, [ask]); return <>{box}</>; }

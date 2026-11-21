@@ -1,4 +1,5 @@
 'use client';
+import { askConfirm } from '@/components/Confirm';
 import { useEffect, useState } from 'react';
 import { get, patch, put, post, del, when } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -29,7 +30,7 @@ function Google() {
   const save = async () => { try { await put('/greviews/config', f); toast.ok('Saved'); l.reload(); } catch (e) { toast.err(e); } };
   const sync = async () => { setBusy(true); try { await put('/greviews/config', f); const r = await post('/greviews/sync'); toast.ok(r.added ? `${r.added} new review${r.added > 1 ? 's' : ''} added` : 'Up to date — no new reviews'); l.reload(); } catch (e) { toast.err(e); l.reload(); } setBusy(false); };
   const toggle = async (r: any) => { try { await patch('/greviews/' + r.id, { visible: !r.is_visible }); l.reload(); } catch (e) { toast.err(e); } };
-  const remove = async (r: any) => { if (!confirm('Delete this review from your dashboard?')) return; try { await del('/greviews/' + r.id); l.reload(); } catch (e) { toast.err(e); } };
+  const remove = async (r: any) => { if (!await askConfirm('Delete this review from your dashboard?')) return; try { await del('/greviews/' + r.id); l.reload(); } catch (e) { toast.err(e); } };
   const shown = l.data.reviews.filter((r: any) => r.is_visible).length;
   return <>
     <div className="card"><div className="row sp" style={{ marginBottom: 4 }}><h2 style={{ margin: 0 }}>Connect Google Business Profile</h2>{c.rating != null && <Badge kind="ok">★ {c.rating} on Google{c.total ? ` · ${c.total} reviews` : ''}</Badge>}</div>
