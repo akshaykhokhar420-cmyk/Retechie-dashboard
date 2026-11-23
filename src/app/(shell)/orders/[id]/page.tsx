@@ -7,6 +7,18 @@ import { useAuth } from '@/lib/auth';
 import { useToast } from '@/lib/toast';
 import { PageHead, Status, Alert, Field, Modal, useLoad, Loading } from '@/components/ui';
 
+const COURIERS: Record<string, string> = {
+  'Blue Dart': 'https://www.bluedart.com/trackdartresult?trackFor=0&trackNo={awb}',
+  'Delhivery': 'https://www.delhivery.com/track-v2/package/{awb}',
+  'DTDC': 'https://tracking.dtdc.com/ctbs-tracking/customerInterface.tr?submitName=showCityTrack&cType=Consignment&cnNo={awb}',
+  'XpressBees': 'https://www.xpressbees.com/shipment/tracking?trackingId={awb}',
+  'Ecom Express': 'https://ecomexpress.in/tracking/?awb_field={awb}',
+  'Shadowfax': 'https://tracker.shadowfax.in/#/track?order={awb}',
+  'India Post': 'https://www.indiapost.gov.in/_layouts/15/dop.portal.tracking/trackconsignment.aspx',
+  'Other': '',
+};
+const trackUrl = (c: string, awb: string) => (COURIERS[c] ?? '').replace('{awb}', encodeURIComponent(awb.trim()));
+
 export default function OrderDetail() {
   const id = Number(useParams().id); const { can } = useAuth(); const toast = useToast(); const l = useLoad(() => get(`/orders/${id}`), [id]); const [note, setNote] = useState(''); const [ship, setShip] = useState<any>(null);
   if (!l.data) return <Loading error={l.error} />;
@@ -27,7 +39,8 @@ export default function OrderDetail() {
         <div className="card"><h2>Customer</h2>{o.contact.name}<br />{o.contact.email}<br />{o.contact.phone}<p>{o.address.line1}, {o.address.city}, {o.address.state} {o.address.pincode}</p>{o.gstin && <p>GSTIN: {o.gstin}</p>}</div>
         <div className="card"><h2>Fulfilment</h2>
           {w && o.allowedNext.length > 0 && <><Field label="Note (optional)"><input value={note} onChange={(e) => setNote(e.target.value)} /></Field>
-            <div className="row">{o.allowedNext.map((s: string) => s === 'shipped' ? <button key={s} className="btn pri" onClick={() => setShip({ carrier: '', trackingNumber: '', trackingUrl: '', eta: '' })}>Add shipment…</button> : <button key={s} className={'btn ' + (s === 'cancelled' ? 'dng' : 'pri')} onClick={() => run(() => patch(`/orders/${id}/status`, { status: s, note }), `Order ${s}`)}>Mark {s}</button>)}</div></>}
+            <div className="row">{o.allowedNext.map((s: string) => s === 'shipped' ? <button key={s} className="btn pri" onClick={() => setShip({ carrier: 'Delhivery', other: '', trackingNumber: '', trackingUrl: '', eta: '', urlEdited: false })}>Add shipment…</button> : <button key={s} className={'btn ' + (s === 'cancelled' ? 'dng' : 'pri')} onClick={() => run(() => patch(`/orders/${id}/status`, { status: s, note }), `Order ${s}`)}>Mark {s}</button>)}</div></>}
+          {o.status === 'confirmed' && !o.allowedNext.includes('shipped') && <p className="hint" style={{ marginTop: 8 }}><button className="btn" onClick={() => setShip({ carrier: 'Delhivery', other: '', trackingNumber: '', trackingUrl: '', eta: '', urlEdited: false })}>Already shipped? Add courier &amp; AWB…</button></p>}
           {!o.allowedNext.length && <p className="hint">This order is {o.status}; no further steps.</p>}
           {o.shipment && <div style={{ marginTop: 10 }}><b>{o.shipment.carrier}</b> · {o.shipment.trackingNumber} <Status s={o.shipment.status} />{o.shipment.trackingUrl && <> · <a href={o.shipment.trackingUrl} target="_blank" rel="noopener noreferrer">track</a></>}
             {w && o.shipment.status === 'shipped' && <div style={{ marginTop: 6 }}><button className="btn sm" onClick={() => run(() => patch(`/orders/${id}/shipment`, { status: 'out_for_delivery' }), 'Updated')}>Out for delivery</button></div>}</div>}</div>
@@ -35,8 +48,10 @@ export default function OrderDetail() {
           {w && <div className="row" style={{ marginTop: 8 }}>{o.paymentMethod === 'cod' && o.paymentStatus !== 'paid' && <button className="btn sm" onClick={() => run(() => patch(`/orders/${id}/payment`, { status: 'paid', note: 'Cash collected' }), 'Marked paid')}>Mark COD paid</button>}{o.paymentStatus === 'paid' && <button className="btn sm dng" onClick={() => run(() => patch(`/orders/${id}/payment`, { status: 'refunded', note }), 'Marked refunded')}>Mark refunded</button>}</div>}
           <p className="hint">Online payments are marked paid only by the gateway’s verified webhook, never by hand.</p></div>
       </div></div>
-    {ship && <Modal title="Shipment details" onClose={() => setShip(null)} footer={<><button className="btn" onClick={() => setShip(null)}>Cancel</button><button className="btn pri" onClick={async () => { const b: any = { carrier: ship.carrier, trackingNumber: ship.trackingNumber }; if (ship.trackingUrl) b.trackingUrl = ship.trackingUrl; if (ship.eta) b.eta = ship.eta; try { if (o.status === 'confirmed') await patch(`/orders/${id}/status`, { status: 'packed', note }).catch(() => {}); await post(`/orders/${id}/shipment`, b); toast.ok('Shipped — customer notified'); setShip(null); l.reload(); } catch (e) { toast.err(e); } }}>Mark shipped</button></>}>
-      <Field label="Carrier"><input value={ship.carrier} onChange={(e) => setShip({ ...ship, carrier: e.target.value })} /></Field><Field label="Tracking number"><input value={ship.trackingNumber} onChange={(e) => setShip({ ...ship, trackingNumber: e.target.value })} /></Field>
-      <Field label="Tracking link (optional)"><input value={ship.trackingUrl} onChange={(e) => setShip({ ...ship, trackingUrl: e.target.value })} /></Field><Field label="Expected delivery"><input type="date" value={ship.eta} onChange={(e) => setShip({ ...ship, eta: e.target.value })} /></Field></Modal>}
+    {ship && <Modal title="Shipment details" onClose={() => setShip(null)} footer={<><button className="btn" onClick={() => setShip(null)}>Cancel</button><button className="btn pri" onClick={async () => { const carrier = ship.carrier === 'Other' ? ship.other.trim() : ship.carrier; if (carrier.length < 2 || ship.trackingNumber.trim().length < 3) { toast.err(new Error('Enter the courier and AWB / tracking number')); return; } const b: any = { carrier, trackingNumber: ship.trackingNumber.trim() }; if (ship.trackingUrl) b.trackingUrl = ship.trackingUrl; if (ship.eta) b.eta = ship.eta; try { if (o.status === 'confirmed') await patch(`/orders/${id}/status`, { status: 'packed', note }).catch(() => {}); await post(`/orders/${id}/shipment`, b); toast.ok('Shipped — customer notified'); setShip(null); l.reload(); } catch (e) { toast.err(e); } }}>Mark shipped</button></>}>
+      <Field label="Courier company"><select value={ship.carrier} onChange={(e) => { const c = e.target.value; setShip({ ...ship, carrier: c, trackingUrl: ship.urlEdited ? ship.trackingUrl : trackUrl(c, ship.trackingNumber) }); }}>{Object.keys(COURIERS).map((c) => <option key={c} value={c}>{c}</option>)}</select></Field>
+      {ship.carrier === 'Other' && <Field label="Courier name"><input value={ship.other} onChange={(e) => setShip({ ...ship, other: e.target.value })} placeholder="e.g. Professional Couriers" /></Field>}
+      <Field label="AWB / tracking number"><input value={ship.trackingNumber} onChange={(e) => { const n = e.target.value; setShip({ ...ship, trackingNumber: n, trackingUrl: ship.urlEdited ? ship.trackingUrl : trackUrl(ship.carrier, n) }); }} /></Field>
+      <Field label="Tracking link (auto-filled, editable)"><input value={ship.trackingUrl} onChange={(e) => setShip({ ...ship, trackingUrl: e.target.value, urlEdited: true })} /></Field><Field label="Expected delivery"><input type="date" value={ship.eta} onChange={(e) => setShip({ ...ship, eta: e.target.value })} /></Field></Modal>}
   </>;
 }
