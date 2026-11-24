@@ -11,7 +11,7 @@ export default function Orders() {
   const [q, setQ] = useState(''); const dq = useDebounced(q); const [status, setStatus] = useState(''); const [pay, setPay] = useState(''); const [off, setOff] = useState(0);
   const l = useLoad(() => get('/orders' + qs({ q: dq, status, payment: pay, limit: 25, offset: off })), [dq, status, pay, off]);
   const counts = useLoad(async () => { const r = await Promise.all(TABS.map((s) => get('/orders' + qs({ status: s, limit: 1 })))); return Object.fromEntries(TABS.map((s, i) => [s, r[i].total])); }, []);
-  return <><PageHead title="Orders" sub="Track every order from placed to delivered." />
+  return <><PageHead title="Orders" sub="Track every order from placed to delivered."><Link className="btn pri" href="/orders/new">Create order</Link></PageHead>
     <div className="ptabs">{TABS.map((s) => <button key={s} className={status === s ? 'on' : ''} onClick={() => { setStatus(s); setOff(0); }} style={{ textTransform: 'capitalize' }}>{s || 'All'}<i>{counts.data?.[s] ?? '–'}</i></button>)}</div>
     <div className="tbar"><div className="sbox"><Icon n="search" /><input placeholder="Order number, name, email or phone…" value={q} onChange={(e) => { setQ(e.target.value); setOff(0); }} /></div>
       <select value={pay} onChange={(e) => { setPay(e.target.value); setOff(0); }}><option value="">Any payment status</option>{['unpaid', 'pending', 'paid', 'failed', 'refunded', 'partially_refunded'].map((s) => <option key={s}>{s}</option>)}</select></div>
