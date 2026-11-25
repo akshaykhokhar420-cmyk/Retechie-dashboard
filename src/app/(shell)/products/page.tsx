@@ -7,7 +7,7 @@ import { useToast } from '@/lib/toast';
 import Icon from '@/components/Icon';
 import { PageHead, Pager, Badge, useLoad, useDebounced, Loading } from '@/components/ui';
 
-const STORE = process.env.NEXT_PUBLIC_STORE_URL || 'http://localhost:3000';
+const STORE = process.env.NEXT_PUBLIC_STORE_URL || 'https://retechie.com';
 const TABS: [string, string][] = [['', 'All'], ['published', 'Published'], ['draft', 'Draft'], ['archived', 'Archived']];
 
 export default function Products() {

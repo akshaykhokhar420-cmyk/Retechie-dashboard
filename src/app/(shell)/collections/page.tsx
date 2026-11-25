@@ -17,7 +17,7 @@ export default function Collections() {
   const { can } = useAuth(); const toast = useToast(); const l = useLoad(() => get('/collections'), []); const cats = useLoad(() => get('/categories'), []); const [ed, setEd] = useState<any>(null); const [step, setStep] = useState(0);
   if (!l.data) return <Loading error={l.error} />;
   const w = can('content.write'); const set = (k: string, v: any) => setEd({ ...ed, [k]: v });
-  const pageUrl = ed ? `${process.env.NEXT_PUBLIC_STORE_URL || 'http://localhost:3000'}/collections/${ed.slug}` : '';
+  const pageUrl = ed ? `${process.env.NEXT_PUBLIC_STORE_URL || 'https://retechie.com'}/collections/${ed.slug}` : '';
   const open = (f: any) => { setStep(0); setEd(f); };
   const steps = ed ? [
     { ic: 'text', t: 'Basics', ok: !!(ed.slug && ed.title) },
@@ -30,7 +30,7 @@ export default function Collections() {
   return <><PageHead title="Collections" sub="Every row is a page on your site at /collections/your-url, with its own heading, text, SEO and a saved product filter. The main /collections page shows all products.">
     {w && <button className="btn pri" onClick={() => open({ ...BLANK, position: l.data.length })}>New collection page</button>}</PageHead>
     <div className="card tw"><table><thead><tr><th>Page URL</th><th>Heading</th><th>Shows</th><th>Status</th><th /></tr></thead><tbody>{l.data.map((r: any) => <tr key={r.id}>
-      <td><a href={`${process.env.NEXT_PUBLIC_STORE_URL || 'http://localhost:3000'}/collections/${r.slug}`} target="_blank" rel="noreferrer">/collections/{r.slug}</a></td><td>{r.heading || r.title}</td><td>{filterText(r)}</td>
+      <td><a href={`${process.env.NEXT_PUBLIC_STORE_URL || 'https://retechie.com'}/collections/${r.slug}`} target="_blank" rel="noreferrer">/collections/{r.slug}</a></td><td>{r.heading || r.title}</td><td>{filterText(r)}</td>
       <td>{r.is_published ? <Badge>Live</Badge> : <Badge>Hidden</Badge>}</td>
       <td className="row"><button className="btn sm" onClick={() => open(toForm(r))}>Edit</button>{w && <button className="btn sm dn" onClick={async () => { if (await await askConfirm(`Delete /collections/${r.slug}?`)) { try { await del(`/collections/${r.id}`); toast.ok('Deleted'); l.reload(); } catch (e: any) { toast.err(e); } } }}>Delete</button>}</td></tr>)}</tbody></table></div>
     {ed && <Modal size="xl" title={ed.id ? 'Edit collection page' : 'New collection page'} onClose={() => setEd(null)} footer={<><button className="btn" disabled={step === 0} onClick={() => setStep(step - 1)}>← Back</button><span className="hint" style={{ marginRight: 'auto' }}>Step {step + 1} of {steps.length}</span>{w && <button className="btn" onClick={save}>Save</button>}{step < steps.length - 1 ? <button className="btn pri" onClick={() => setStep(step + 1)}>Next →</button> : w && <button className="btn pri" onClick={save}>Save page</button>}</>}>

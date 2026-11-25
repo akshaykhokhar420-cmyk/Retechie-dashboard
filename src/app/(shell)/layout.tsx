@@ -18,7 +18,7 @@ const NAV: { g: string; items: Item[] }[] = [
   { g: 'Growth', items: [['/seo-analysis', 'SEO Analysis', ['seo.read', 'seo.write'], 'search'], ['/cookies', 'Cookies & privacy', ['cookies.read', 'cookies.write'], 'shield']] },
   { g: 'System', items: [['/knowledge', 'Knowledge Center', ['settings.read', 'settings.write'], 'chat'], ['/developer', 'Developer', ['developer.view'], 'code'], ['/emails', 'Emails', ['settings.read', 'settings.write'], 'mail'], ['/settings', 'Settings', ['settings.read', 'settings.write'], 'cog'], ['/payments', 'Online payments', ['settings.read', 'settings.write'], 'card'], ['/users', 'Users & roles', ['users.manage'], 'key'], ['/audit', 'Audit log', ['audit.read'], 'list'], ['/account', 'My account', [], 'user']] },
 ];
-const STORE = (process.env.NEXT_PUBLIC_STORE_URL || 'http://localhost:3000').replace(/\/$/, '');
+const STORE = (process.env.NEXT_PUBLIC_STORE_URL || 'https://retechie.com').replace(/\/$/, '');
 
 type Cmd = { id: string; label: string; hint?: string; icon: string; run: () => void };
 

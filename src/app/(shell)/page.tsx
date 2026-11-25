@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth';
 import { Loading, useLoad, Status, Alert, Empty } from '@/components/ui';
 import Icon from '@/components/Icon';
 
-const STORE = (process.env.NEXT_PUBLIC_STORE_URL || 'http://localhost:3000').replace(/\/$/, '');
+const STORE = (process.env.NEXT_PUBLIC_STORE_URL || 'https://retechie.com').replace(/\/$/, '');
 const greet = () => { const h = new Date().getHours(); return h < 5 ? 'Burning the midnight oil' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : h < 21 ? 'Good evening' : 'Good night'; };
 const EMO = () => { const h = new Date().getHours(); return h < 5 ? '🌙' : h < 12 ? '☀️' : h < 17 ? '👋' : h < 21 ? '🌆' : '🌙'; };
 const sample = (v: any) => !v || /90000 00000|support@retechie\.in|AAKCR1234|example\.com/i.test(String(v));
