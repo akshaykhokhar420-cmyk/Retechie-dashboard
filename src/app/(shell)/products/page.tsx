@@ -1,7 +1,8 @@
 'use client';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { get, patch, rupees, qs } from '@/lib/api';
+import { get, post, patch, rupees, qs } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/lib/toast';
 import Icon from '@/components/Icon';
@@ -11,10 +12,18 @@ const STORE = process.env.NEXT_PUBLIC_STORE_URL || 'https://retechie.com';
 const TABS: [string, string][] = [['', 'All'], ['published', 'Published'], ['draft', 'Draft'], ['archived', 'Archived']];
 
 export default function Products() {
-  const { can } = useAuth(); const toast = useToast(); const [q, setQ] = useState(''); const dq = useDebounced(q); const [status, setStatus] = useState(''); const [cat, setCat] = useState(''); const [off, setOff] = useState(0);
+  const { can } = useAuth(); const toast = useToast(); const router = useRouter(); const [cloning, setCloning] = useState<number | null>(null); const [q, setQ] = useState(''); const dq = useDebounced(q); const [status, setStatus] = useState(''); const [cat, setCat] = useState(''); const [off, setOff] = useState(0);
   const l = useLoad(() => get('/products' + qs({ q: dq, status, category: cat, limit: 25, offset: off })), [dq, status, cat, off]);
   const counts = useLoad(async () => { const r = await Promise.all(TABS.map(([s]) => get('/products' + qs({ status: s, limit: 1 })))); return Object.fromEntries(TABS.map(([s], i) => [s, r[i].total])); }, []);
   const cats = useLoad(() => get('/categories'), []);
+  const clone = async (p: any) => {
+    if (cloning) return; setCloning(p.id);
+    try {
+      const d: any = await get(`/products/${p.id}`);
+      const n = await post<any>('/products', { title: `${d.title} (Copy)`.slice(0, 255), brand: d.brand, model: d.model, sku: `${d.sku}-C${Math.random().toString(36).slice(2, 6).toUpperCase()}`.slice(0, 80), primaryCategory: d.category, summary: d.summary, description: d.description, price: d.price, mrp: d.mrp, grade: d.grade, condition: d.condition, ram: d.ram, cpu: d.cpu, screen: d.screen, use: d.use, warrantyMonths: d.warrantyMonths, delivery: d.delivery, badge: d.badge || '', popularity: d.popularity, featured: false, status: 'draft', quantity: 0, specs: d.specs, inspection: d.inspection, categoryIds: d.categoryIds, imageIds: (d.images || []).map((i: any) => i.id), relatedIds: (d.related || []).map((r: any) => r.id) });
+      toast.ok('Copy created as a draft. Edit the configuration, then publish.'); router.push(`/products/${n.id}`);
+    } catch (e) { toast.err(e); } finally { setCloning(null); }
+  };
   const toggle = async (p: any) => { try { await patch(`/products/${p.id}/status`, { status: p.status === 'published' ? 'draft' : 'published' }); toast.ok(p.status === 'published' ? 'Moved to draft' : 'Published'); l.reload(); counts.reload(); } catch (e) { toast.err(e); } };
   return <><PageHead title="Products" sub="Everything you sell. Click a product to edit it.">{can('products.write') && <Link className="btn pri" href="/products/new"><Icon n="plus" /> New product</Link>}</PageHead>
     <div className="ptabs">{TABS.map(([s, t]) => <button key={s} className={status === s ? 'on' : ''} onClick={() => { setStatus(s); setOff(0); }}>{t}<i>{counts.data?.[s] ?? '–'}</i></button>)}</div>
@@ -25,6 +34,6 @@ export default function Products() {
       <td><b>{rupees(p.price)}</b>{p.mrp > p.price && <div className="hint"><s>{rupees(p.mrp)}</s> · {Math.round((1 - p.price / p.mrp) * 100)}% off</div>}</td>
       <td>{st <= 0 ? <Badge kind="err">Out of stock</Badge> : st <= 3 ? <Badge kind="warn">Low · {st}</Badge> : <span className="stk"><i style={{ width: Math.min(100, st * 8) + '%' }} />{st} in stock</span>}</td>
       <td>{can('products.publish') ? <label className="sw mini-sw" title={p.status === 'published' ? 'Click to unpublish' : 'Click to publish'}><input type="checkbox" checked={p.status === 'published'} onChange={() => toggle(p)} /><i /><span><b style={{ textTransform: 'capitalize' }}>{p.status}</b></span></label> : <Badge>{p.status}</Badge>}</td>
-      <td className="acts"><Link className="btn sm" href={`/products/${p.id}`}>Edit</Link>{p.status === 'published' && <a className="btn sm" target="_blank" rel="noreferrer" href={`${STORE}/product/${p.slug}`}>View ↗</a>}</td></tr>; })}</tbody></table>{!l.data.rows.length && <div className="empty-row">No products match your filters.</div>}</div>
+      <td className="acts"><Link className="btn sm" href={`/products/${p.id}`}>Edit</Link>{can('products.write') && <button className="btn sm" disabled={cloning === p.id} onClick={() => clone(p)}>{cloning === p.id ? 'Cloning…' : 'Clone'}</button>}{p.status === 'published' && <a className="btn sm" target="_blank" rel="noreferrer" href={`${STORE}/product/${p.slug}`}>View ↗</a>}</td></tr>; })}</tbody></table>{!l.data.rows.length && <div className="empty-row">No products match your filters.</div>}</div>
       <Pager total={l.data.total} limit={25} offset={off} onChange={setOff} /></>}</>;
 }
