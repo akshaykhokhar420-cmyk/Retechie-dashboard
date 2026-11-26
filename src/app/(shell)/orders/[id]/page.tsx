@@ -36,7 +36,14 @@ export default function OrderDetail() {
           {w && <div className="row" style={{ margin: '6px 0' }}>{['approved', 'picked_up', 'refunded', 'rejected'].filter((s) => s !== r.status).map((s) => <button key={s} className="btn sm" onClick={() => run(() => patch('/returns/' + r.id, { status: s }), 'Return updated')}>{s.replace('_', ' ')}</button>)}</div>}</div>)}</div>}
       </div>
       <div>
-        <div className="card"><h2>Customer</h2>{o.contact.name}<br />{o.contact.email}<br />{o.contact.phone}<p>{o.address.line1}, {o.address.city}, {o.address.state} {o.address.pincode}</p>{o.gstin && <p>GSTIN: {o.gstin}</p>}</div>
+        <div className="card"><h2>Customer</h2>{o.contact.name}<br />{o.contact.email}<br />{(() => {
+          const ph = String(o.contact.phone || '').replace(/\D/g, ''); if (!ph) return null;
+          const wa = (ph.length === 10 ? '91' + ph : ph.replace(/^0+/, ''));
+          const first = String(o.contact.name || '').trim().split(/\s+/)[0] || 'there';
+          const bad = o.status === 'cancelled' || o.status === 'pending' || (o.paymentMethod !== 'cod' && o.paymentStatus !== 'paid');
+          const text = bad ? `Hi ${first}, we saw that the payment for your Retechie order ${o.number} failed or is still pending. Is there any issue? We are happy to help.` : `Hi ${first}, this is Retechie regarding your order ${o.number}. How can we help?`;
+          return <a href={`https://wa.me/${wa}?text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer" title="Open WhatsApp with a ready message" style={{ color: '#25D366', fontWeight: 600 }}>{o.contact.phone} · WhatsApp ↗</a>;
+        })()}<p>{o.address.line1}, {o.address.city}, {o.address.state} {o.address.pincode}</p>{o.gstin && <p>GSTIN: {o.gstin}</p>}</div>
         <div className="card"><h2>Fulfilment</h2>
           {w && o.allowedNext.length > 0 && <><Field label="Note (optional)"><input value={note} onChange={(e) => setNote(e.target.value)} /></Field>
             <div className="row">{o.allowedNext.map((s: string) => s === 'shipped' ? <button key={s} className="btn pri" onClick={() => setShip({ carrier: 'Delhivery', other: '', trackingNumber: '', trackingUrl: '', eta: '', urlEdited: false })}>Add shipment…</button> : <button key={s} className={'btn ' + (s === 'cancelled' ? 'dng' : 'pri')} onClick={() => run(() => patch(`/orders/${id}/status`, { status: s, note }), `Order ${s}`)}>Mark {s}</button>)}</div></>}
