@@ -17,10 +17,12 @@ const LABEL: Record<string, string> = { in_stock: 'In stock', sold: 'Sold', retu
 
 export default function Stock() {
   const { can } = useAuth(); const toast = useToast(); const w = can('products.write');
-  const [view, setView] = useState<'units' | 'vendors'>('units'); const [status, setStatus] = useState('in_stock'); const [vendor, setVendor] = useState(''); const [q, setQ] = useState(''); const dq = useDebounced(q); const [off, setOff] = useState(0);
+  const [view, setView] = useState<'units' | 'qty' | 'vendors'>('units'); const [status, setStatus] = useState('in_stock'); const [vendor, setVendor] = useState(''); const [q, setQ] = useState(''); const dq = useDebounced(q); const [off, setOff] = useState(0);
   const [edit, setEdit] = useState<any>(null); const [sell, setSell] = useState<any>(null); const [bulk, setBulk] = useState(false); const [vEdit, setVEdit] = useState<any>(null); const [qc, setQc] = useState<any>(null);
   const units = useLoad(() => get('/stock/units' + qs({ status, vendor, q: dq, limit: 25, offset: off })), [status, vendor, dq, off]);
   const vendors = useLoad(() => get('/stock/vendors'), []);
+  const [qq, setQq] = useState(''); const dqq = useDebounced(qq); const [qoff, setQoff] = useState(0);
+  const byQty = useLoad(() => get('/stock/by-quantity' + qs({ q: dqq, limit: 25, offset: qoff })), [dqq, qoff]);
   const reloadAll = () => { units.reload(); vendors.reload(); };
   const s = units.data?.summary;
   const back = async (u: any) => { if (!await askConfirm(`Mark ${u.model_number} as returned and remove the customer?`)) return; try { await post(`/stock/units/${u.id}/return`); toast.ok('Marked returned'); reloadAll(); } catch (e) { toast.err(e); } };
@@ -30,13 +32,14 @@ export default function Stock() {
     <a className="btn" href="/api/v1/admin/stock/units.csv" target="_blank" rel="noreferrer">Export CSV</a>
     {w && <><button className="btn" onClick={() => setBulk(true)}>Add many</button><button className="btn pri" onClick={() => setEdit({})}><Icon n="plus" /> Add machine</button></>}</PageHead>
 
-    <div className="grid g4" style={{ marginBottom: 16 }}>
+    <div className="grid g4" style={{ marginBottom: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))' }}>
       <div className="stat"><span className="hint">In stock</span><b style={{ fontSize: 26 }}>{s?.inStock ?? '–'}</b><span className="hint">machines on shelf</span></div>
+      <div className="stat"><span className="hint">In stock (by quantity)</span><b style={{ fontSize: 26 }}>{byQty.data?.totalQuantity ?? '–'}</b><span className="hint">what customers can buy{byQty.data?.withoutSerial ? ' · ' + byQty.data.withoutSerial + ' without serial' : ''}</span></div>
       <div className="stat"><span className="hint">Stock value</span><b style={{ fontSize: 26 }}>{s ? inr(s.stockValue) : '–'}</b><span className="hint">at purchase price</span></div>
       <div className="stat"><span className="hint">Sold</span><b style={{ fontSize: 26 }}>{s?.sold ?? '–'}</b><span className="hint">machines sold</span></div>
       <div className="stat"><span className="hint">Profit on sold</span><b style={{ fontSize: 26, color: s && s.profit < 0 ? 'var(--err)' : undefined }}>{s ? inr(s.profit) : '–'}</b><span className="hint">sold price − purchase</span></div></div>
 
-    <div className="ptabs"><button className={view === 'units' ? 'on' : ''} onClick={() => setView('units')}>Machines</button><button className={view === 'vendors' ? 'on' : ''} onClick={() => setView('vendors')}>Vendors<i>{vendors.data?.length ?? '–'}</i></button></div>
+    <div className="ptabs"><button className={view === 'units' ? 'on' : ''} onClick={() => setView('units')}>Machines</button><button className={view === 'qty' ? 'on' : ''} onClick={() => setView('qty')}>By quantity<i>{byQty.data?.total ?? '–'}</i></button><button className={view === 'vendors' ? 'on' : ''} onClick={() => setView('vendors')}>Vendors<i>{vendors.data?.length ?? '–'}</i></button></div>
 
     {view === 'units' ? <>
       <div className="ptabs" style={{ marginTop: -4 }}>{TABS.map(([k, t]) => <button key={k} className={status === k ? 'on' : ''} onClick={() => { setStatus(k); setOff(0); }}>{t}{k && s ? <i>{k === 'in_stock' ? s.inStock : k === 'sold' ? s.sold : k === 'returned' ? s.returned : s.defective}</i> : k === '' && s ? <i>{s.total}</i> : null}</button>)}</div>
@@ -51,6 +54,15 @@ export default function Stock() {
         <td className="acts">{w && (u.status !== 'sold' ? <button className="btn sm pri" onClick={() => setSell({ unit: u, soldDate: today(), warrantyMonths: 12 })}>Sell</button> : <button className="btn sm" onClick={() => back(u)}>Returned</button>)}{w && u.status !== 'sold' && <button className="btn sm" onClick={() => setQc(u)}>QC</button>}{w && <button className="btn sm" onClick={() => setEdit({ ...u, purchase_date: iso(u.purchase_date) })}>Edit</button>}{w && u.status !== 'sold' && <button className="btn sm dng" onClick={() => remove(u)}>✕</button>}</td></tr>)}</tbody></table>
         {!units.data.rows.length && <div className="empty-row">{s?.total ? 'No machines match.' : 'No machines yet — click “Add machine” to record your first one.'}</div>}</div>
         <Pager total={units.data.total} limit={25} offset={off} onChange={setOff} /></>}</>
+    : view === 'qty' ? <>
+      <div className="tbar"><div className="sbox"><Icon n="search" /><input placeholder="Search product or SKU…" value={qq} onChange={(e) => { setQq(e.target.value); setQoff(0); }} /></div></div>
+      <p className="hint" style={{ margin: '0 0 8px' }}>Quantity is what the shop sells from. “Serial entered” is how many machines you have recorded one by one. A difference is fine — it only means serials are not entered for every machine.</p>
+      {!byQty.data ? <Loading error={byQty.error} /> : <><div className="card tw plist"><table><thead><tr><th>Product</th><th>Quantity</th><th>Reserved</th><th>Serial entered</th><th>Status</th></tr></thead><tbody>{byQty.data.rows.map((r: any) => <tr key={r.id}>
+        <td><b>{r.title}</b><div className="hint">{r.sku}</div></td><td><b>{r.quantity}</b></td><td>{r.reserved || <span className="hint">0</span>}</td>
+        <td>{r.units}{r.quantity > r.units && <div className="hint">{r.quantity - r.units} without serial</div>}{r.units > r.quantity && <div className="hint" style={{ color: 'var(--err)' }}>{r.units - r.quantity} more than quantity</div>}</td>
+        <td><Badge kind={r.status === 'published' ? 'ok' : 'warn'}>{r.status}</Badge></td></tr>)}</tbody></table>
+        {!byQty.data.rows.length && <div className="empty-row">No products with stock.</div>}</div>
+        <Pager total={byQty.data.total} limit={25} offset={qoff} onChange={setQoff} /></>}</></>
     : <>{!vendors.data ? <Loading error={vendors.error} /> : <div className="card tw plist"><table><thead><tr><th>Vendor</th><th>Contact</th><th>City</th><th>Machines</th><th>Total bought</th><th /></tr></thead><tbody>{vendors.data.map((v: any) => <tr key={v.id}><td><b>{v.name}</b>{v.gstin && <div className="hint">GSTIN {v.gstin}</div>}</td><td>{v.contact_person}<div className="hint">{[v.phone, v.email].filter(Boolean).join(' · ')}</div></td><td>{v.city || '—'}</td><td>{v.units}</td><td>{inr(v.spent)}</td>
       <td className="acts">{w && <><button className="btn sm" onClick={() => setVEdit(v)}>Edit</button><button className="btn sm dng" onClick={async () => { if (!await askConfirm('Delete vendor ' + v.name + '?')) return; try { await del('/stock/vendors/' + v.id); vendors.reload(); } catch (e) { toast.err(e); } }}>✕</button></>}</td></tr>)}</tbody></table>
       {!vendors.data.length && <div className="empty-row">No vendors yet — they appear here when you add a machine.</div>}</div>}
