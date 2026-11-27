@@ -62,7 +62,7 @@ export default function Stock() {
         <td>{r.units}{r.quantity > r.units && <div className="hint">{r.quantity - r.units} without serial</div>}{r.units > r.quantity && <div className="hint" style={{ color: 'var(--err)' }}>{r.units - r.quantity} more than quantity</div>}</td>
         <td><Badge kind={r.status === 'published' ? 'ok' : 'warn'}>{r.status}</Badge></td></tr>)}</tbody></table>
         {!byQty.data.rows.length && <div className="empty-row">No products with stock.</div>}</div>
-        <Pager total={byQty.data.total} limit={25} offset={qoff} onChange={setQoff} /></>}</></>
+        <Pager total={byQty.data.total} limit={25} offset={qoff} onChange={setQoff} /></>}</>
     : <>{!vendors.data ? <Loading error={vendors.error} /> : <div className="card tw plist"><table><thead><tr><th>Vendor</th><th>Contact</th><th>City</th><th>Machines</th><th>Total bought</th><th /></tr></thead><tbody>{vendors.data.map((v: any) => <tr key={v.id}><td><b>{v.name}</b>{v.gstin && <div className="hint">GSTIN {v.gstin}</div>}</td><td>{v.contact_person}<div className="hint">{[v.phone, v.email].filter(Boolean).join(' · ')}</div></td><td>{v.city || '—'}</td><td>{v.units}</td><td>{inr(v.spent)}</td>
       <td className="acts">{w && <><button className="btn sm" onClick={() => setVEdit(v)}>Edit</button><button className="btn sm dng" onClick={async () => { if (!await askConfirm('Delete vendor ' + v.name + '?')) return; try { await del('/stock/vendors/' + v.id); vendors.reload(); } catch (e) { toast.err(e); } }}>✕</button></>}</td></tr>)}</tbody></table>
       {!vendors.data.length && <div className="empty-row">No vendors yet — they appear here when you add a machine.</div>}</div>}
